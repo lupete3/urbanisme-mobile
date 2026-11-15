@@ -61,6 +61,7 @@
     post: (p, b) => call('POST', p, b === undefined ? {} : b),
     put: (p, b) => call('PUT', p, b),
     del: (p, b) => call('DELETE', p, b),
+    raw: (p) => call('GET', p, undefined, true),
     // Image protégée par le jeton -> adresse locale utilisable dans <img src>
     async image(p) { const r = await call('GET', p, undefined, true); return URL.createObjectURL(await r.blob()); },
     async setToken(t) { token = t || ''; if (t) await store.set('token', t); else await store.remove('token'); },

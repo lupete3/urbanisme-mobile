@@ -1,6 +1,6 @@
 // DOSSIERUrba Mobile : navigation et écrans (compte, consentement, dossiers).
 (() => {
-  const APP_VERSION = '1.0.4';
+  const APP_VERSION = '1.0.5';
   const C = window.Capacitor;
   const App = api.plugin('App');
   const view = document.getElementById('view');
@@ -179,8 +179,10 @@
 
   function dossierScreen(id) {
     return el('div', {}, back$(), later(async (box) => {
-      const { dossier: d } = await api.get('dossiers/' + id);
+      const { dossier: d, access } = await api.get('dossiers/' + id);
       const edit = d.status === 'brouillon';
+      // La planche d'une notice n'est générée qu'à l'envoi : elle est « faite » dès que le texte est rempli
+      d.pieces.forEach((p) => { if (p.kind === 'txt') p.done = !!String(d.description || '').trim(); });
       const pieces = d.pieces.map((p) => {
         const card = el('div', { class: 'card piece' },
           el('div', { class: 'row' }, el('b', {}, p.code + ' – ' + p.title), p.done ? el('span', { class: 'ok' }, '✔') : p.optional ? el('span', { class: 'badge b-opt' }, 'Facultatif') : el('span', { class: 'todo' }, 'à compléter')),
@@ -210,10 +212,55 @@
           el('p', { class: 'mu' }, 'Téléchargez le formulaire, imprimez-le et remplissez-le au stylo. Il se dépose en mairie avec les pièces ci-dessous.'),
           el('a', { class: 'btn', href: d.cerfa.url, target: '_blank', rel: 'noopener' }, 'Accéder au Cerfa ↗')),
         pieces,
-        edit ? el('div', { class: 'card note' }, d.missing.length ? ['Pièces obligatoires à compléter : ', el('b', {}, d.missing.join(', ')), '.'] : 'Toutes les pièces obligatoires sont prêtes. L’envoi du dossier et le PDF arrivent dans une prochaine version de l’application.') : null,
-        d.status === 'paye' ? el('div', { class: 'card acc' }, 'Dossier débloqué : le PDF complet est disponible sur le site (dans l’application à la prochaine version).') : null,
+        sendBlock(d, access),
         actions);
     }));
+  }
+
+  /* ---------- Envoi du dossier et PDF (étape 2.5) ---------- */
+  // Bouton occupé pendant une action ; les erreurs s'affichent dans une boîte de dialogue
+  async function busy(b, fn) { const label = b.innerHTML; b.disabled = true; fill(b, el('span', { class: 'spin' })); try { await fn(); } catch (e) { if (!(await guard(e))) alert(e.message); } finally { if (b.isConnected) { b.disabled = false; b.innerHTML = label; } } }
+  // Page de garde et notice dessinées sur le téléphone (mêmes fonctions que le site), puis envoyées
+  async function prepSheets(d) {
+    const E = window.DPEditor; E.setHead(d.head);
+    const cv = document.createElement('canvas'); cv.width = E.W; cv.height = E.H; const c = cv.getContext('2d');
+    const meta = { titre: d.titre, adresse: d.adresse, parcelle: d.parcelle, owner: state.user.name };
+    const list = d.pieces.filter((p) => !p.optional || p.done).map((p) => p.code + ' : ' + p.title);
+    const txt = d.pieces.find((p) => p.kind === 'txt');
+    const up = async (code, title, draw, desc) => {
+      E.frame(c, meta, code, title); draw();
+      const fd = new FormData(); fd.append('data', '{}'); fd.append('sheet', await new Promise((r) => cv.toBlob(r, 'image/jpeg', 0.88)), 's.jpg');
+      if (desc !== undefined) fd.append('desc', desc);
+      await api.post('dossiers/' + d.id + '/pieces/' + encodeURIComponent(code), fd);
+    };
+    await up(d.type + '0', 'PAGE DE GARDE', () => E.cover(c, meta, list));
+    if (txt) await up(txt.code, txt.title.toUpperCase(), () => { c.fillStyle = '#14213d'; c.textBaseline = 'top'; c.font = '28px Arial'; E.wrap(c, d.description || '(à compléter)', 80, 80, E.W - 160, 40); }, d.description);
+  }
+  const toBase64 = (blob) => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = () => no(r.error); r.readAsDataURL(blob); });
+  // PDF : enregistré dans le cache de l'appli puis proposé au partage (mail, WhatsApp, Drive, lecteur PDF…)
+  async function openPdf(d) {
+    const r = await api.raw('dossiers/' + d.id + '/pdf'), blob = await r.blob();
+    const m = /filename="([^"]+)"/.exec(r.headers.get('Content-Disposition') || ''), name = m ? m[1] : 'DOSSIERUrba-' + d.type + '-' + d.id + '.pdf';
+    const FS = api.plugin('Filesystem'), Share = api.plugin('Share');
+    if (FS && Share) {
+      const w = await FS.writeFile({ path: name, data: await toBase64(blob), directory: 'CACHE' });
+      try { await Share.share({ title: name, text: 'Dossier ' + d.type + ' – ' + d.titre, files: [w.uri], dialogTitle: 'Ouvrir ou partager le PDF' }); }
+      catch (e) { if (!/cancel|annul/i.test(e && e.message || '')) throw e; }
+    } else { const u = URL.createObjectURL(blob), a = el('a', { href: u, download: name }); document.body.append(a); a.click(); a.remove(); }
+  }
+  function sendBlock(d, access) {
+    const edit = d.status === 'brouillon', hasSheet = d.pieces.some((p) => p.done);
+    const pdfBtn = (edit && !hasSheet) ? null : el('button', { class: d.status === 'paye' ? '' : 'ghost', onclick: (e) => busy(e.currentTarget, async () => { if (edit) await prepSheets(d); await openPdf(d); }) },
+      d.status === 'paye' ? 'Télécharger / partager le PDF complet' : 'Aperçu du PDF (filigrané)');
+    if (!edit) return [el('div', { class: 'card ' + (d.status === 'paye' ? 'acc' : 'note') }, d.status === 'paye' ? 'Dossier débloqué : le PDF complet est disponible, sans filigrane.' : 'Dossier envoyé : il sera débloqué dès la validation de votre paiement' + (d.price ? ' (' + d.price + ')' : '') + '.'), pdfBtn];
+    if (d.missing.length) return [el('div', { class: 'card note' }, 'Pièces obligatoires à compléter avant l’envoi : ', el('b', {}, d.missing.join(', ')), '.'), pdfBtn];
+    const free = access && access.ok;
+    return [el('div', { class: 'card ' + (free ? 'acc' : 'note') }, el('p', { style: 'margin:0' }, access ? access.text : ''), !free && d.price ? el('p', { style: 'margin:6px 0 0' }, 'Prix : ', el('b', {}, d.price)) : null),
+      el('button', { onclick: (e) => busy(e.currentTarget, async () => {
+        if (!confirm(free ? 'Finaliser le dossier ? Il ne sera plus modifiable et le PDF complet sera disponible.' : 'Envoyer le dossier pour validation ? Il ne sera plus modifiable en attendant.')) return;
+        await prepSheets(d); const j = await api.post('dossiers/' + d.id + '/submit'); alert(j.message); show(dossierScreen, d.id, false);
+      }) }, free ? 'Finaliser le dossier et obtenir le PDF' : 'Envoyer le dossier pour validation'),
+      pdfBtn];
   }
 
   // Éditeur de planches : celui du site (js/editor.js), branché sur l'API par js/editor-io.js
