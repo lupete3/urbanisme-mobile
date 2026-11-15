@@ -1,8 +1,8 @@
 // DOSSIERUrba Mobile : navigation et écrans (étape 2.2 : compte et consentement).
 (() => {
-  const APP_VERSION = '1.0.1';
+  const APP_VERSION = '1.0.2';
   const C = window.Capacitor;
-  const App = api.native ? C.registerPlugin('App') : null;
+  const App = api.plugin('App');
   const view = document.getElementById('view');
   const state = { config: null, user: null };
   const stack = []; // historique des écrans, pour le bouton Retour d'Android

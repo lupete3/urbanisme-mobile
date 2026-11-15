@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "Application mobile DOSSIERUrba (Capacitor)",
   "scripts": {
-    "sync": "cap sync android",
+    "sync": "node scripts/copy-core.js && cap sync android",
     "open": "cap open android",
-    "apk": "cap sync android && cd android && gradlew.bat assembleDebug"
+    "apk": "npm run sync && cd android && gradlew.bat assembleDebug"
   },
   "keywords": [],
   "author": "",

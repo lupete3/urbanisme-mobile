@@ -4,7 +4,11 @@
 (() => {
   const C = window.Capacitor;
   const native = !!(C && C.isNativePlatform && C.isNativePlatform());
-  const Prefs = native ? C.registerPlugin('Preferences') : null;
+  // Les plugins natifs passent par registerPlugin, fourni par js/capacitor.js (module de base de Capacitor,
+  // copié par « npm run sync » car l'appli n'utilise pas d'outil de build).
+  const reg = (window.capacitorExports && window.capacitorExports.registerPlugin) || (C && C.registerPlugin);
+  const plugin = (name) => { if (!native) return null; try { return typeof reg === 'function' ? reg(name) : null; } catch (e) { window.bootError && window.bootError('Plugin ' + name + ' : ' + e.message); return null; } };
+  const Prefs = plugin('Preferences');
 
   // Adresse de l'API : le site en ligne. Pour les tests dans un navigateur, on peut la changer
   // avec localStorage.setItem('api', 'http://localhost:8098/api.php?r=').
@@ -50,6 +54,7 @@
 
   window.api = {
     native,
+    plugin,
     get: (p) => call('GET', p),
     post: (p, b) => call('POST', p, b === undefined ? {} : b),
     put: (p, b) => call('PUT', p, b),
