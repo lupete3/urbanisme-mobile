@@ -57,3 +57,18 @@ button.danger{background:transparent;color:var(--er);border-color:var(--er)}
 .cerfa{border-left:4px solid var(--navy)}
 textarea{width:100%;font:inherit;padding:12px 14px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);margin-top:6px}
 .pre{white-space:pre-wrap}
+
+/* Éditeur de planches (étape 2.4) : styles du site adaptés au téléphone */
+.ed{margin:0 -8px}
+.ed button,.ed .b{width:auto;margin:0;padding:8px 10px;font-size:14px;font-weight:600;display:inline-flex}
+.ed a.b{color:#fff;background:var(--navy);border-radius:8px;text-decoration:none}
+.ed label{margin:0;font-size:12px;font-weight:600}
+.ed input[type=text],.ed input[type=number],.ed input:not([type]){padding:6px 8px;font-size:14px;border:1px solid var(--bd);border-radius:6px;background:var(--card);color:var(--tx)}
+.ed small{color:var(--mu);font-size:12px;width:100%}
+.ed canvas{border-radius:6px}
+.ed>div:last-of-type{margin-top:10px}
+/* Téléphone : émojis et bibliothèque sur une ligne défilante, astuce clavier masquée */
+.ed>div:nth-child(3){flex-wrap:nowrap!important;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.ed>div:nth-child(3) b{white-space:nowrap}
+.ed>div:nth-child(4)>div:last-child{flex-wrap:nowrap!important;overflow-x:auto}
+.ed small{display:none}

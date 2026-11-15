@@ -7,7 +7,7 @@ Cahier des charges complet : `docs/plan-mobile.md` dans le dépôt du site.
 | 2.1 Projet | Capacitor 8 + Android, identifiant `com.dossierurba.app`, écran provisoire qui vérifie l'API | ✅ 15/11/2026 |
 | 2.2 Compte | Écran d'ouverture, consentement, inscription, connexion, mot de passe oublié, jeton conservé dans le stockage privé de l'appli (Preferences), bouton Retour Android, écran « mise à jour nécessaire », écran hors connexion | ✅ 15/11/2026 |
 | 2.3 Dossiers | Accueil (formule d'accès, zone de la parcelle, liste avec avancement), création DP / AP / PD (PC / PL / AT « pas encore disponible »), fiche du dossier (Cerfa, pièces avec aides, planches avec filigrane, notice DP11 / PD9), modifier un dossier en attente, supprimer un dossier | ✅ 15/11/2026 |
-| 2.4 Éditeur | Reprise de `editor.js` du site, appareil photo natif, galerie, émojis, bibliothèque, Annuler / Rétablir | ⏳ (le bouton « Ouvrir l’éditeur » affiche pour l’instant un message) |
+| 2.4 Éditeur | Éditeur du site réutilisé (`www/js/editor.js`, copié par `npm run sync`), branché sur l'API par `www/js/editor-io.js` : appareil photo et galerie natifs (plugin Camera), annotations, émojis, bibliothèque (y compris objets partagés), Annuler / Rétablir, filigrane BROUILLON, enregistrement puis retour à la fiche | ✅ 15/11/2026 |
 | 2.5 Envoi et PDF | Page de garde et notice générées sur le téléphone, envoi, téléchargement et partage du PDF | — |
 | 2.6 Profil | Modifier ses informations et ses choix, export des données, suppression du compte | — |
 | 2.7 Finitions | Icône, écran de démarrage, notifications (Firebase), version minimale, tests sur appareil | — |
@@ -32,6 +32,8 @@ Cahier des charges complet : `docs/plan-mobile.md` dans le dépôt du site.
 | `index.html` | Coquille : écran d'ouverture, zone d'affichage, chargement des scripts |
 | `css/app.css` | Styles (couleurs du logo, mode sombre, zones sûres de l'écran) |
 | `js/api.js` | Client de l'API (`window.api`) et stockage du jeton (Preferences dans l'appli, localStorage dans un navigateur) |
+| `js/editor-io.js` | Branche l'éditeur sur l'API et l'appareil photo ; boîtes de dialogue |
+| `js/editor.js` | Éditeur de planches du site (copie, ne pas modifier ici : modifier `assets/editor.js` du site puis `npm run sync`) |
 | `js/app.js` | Navigation (historique et bouton Retour) et écrans |
 
 **Tester dans un navigateur** : servir `www/` à côté d'une copie du site (même origine), puis dans la console : `localStorage.setItem('api','/api.php?r=')`. Sinon, l'appli appelle l'API en ligne.
@@ -47,3 +49,5 @@ Cahier des charges complet : `docs/plan-mobile.md` dans le dépôt du site.
 - **Versions de test** : 1.0.0 (bloquée), 1.0.1 (diagnostic), 1.0.2 (correction des plugins), validée sur le téléphone du client le 15/11/2026.
 
 **Testé le 15/11/2026, étape 2.3** (navigateur, format mobile, copie locale du site) : liste et avancement, ouverture d'un dossier, planche protégée affichée (filigrane BROUILLON), notice enregistrée (pièces manquantes mises à jour), choix du type (PC / PL / AT désactivés), création d'un AP (7 pièces), retour à l'accueil, suppression d'un dossier. APK 1.0.3 compilé, lancé sur un émulateur Android 15 relié au site en ligne (écran de démarrage puis connexion). Icône adaptative réduite pour ne plus être rognée sur l’écran de démarrage d’Android 12 et plus.
+
+**Testé le 15/11/2026, étape 2.4** (navigateur, format mobile, copie locale du site) : éditeur du site sans régression (photo collée, objet de bibliothèque, enregistrement) ; dans l'appli : ouverture de l'éditeur AP5, objet partagé par l'admin chargé via l'API, émoji, enregistrement, retour à la fiche (pièce cochée, avancement 1 / 7), réouverture avec photo et annotations rechargées. APK 1.0.4 compilé. Appareil photo natif : à vérifier sur téléphone.

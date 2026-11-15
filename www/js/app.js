@@ -1,6 +1,6 @@
 // DOSSIERUrba Mobile : navigation et écrans (compte, consentement, dossiers).
 (() => {
-  const APP_VERSION = '1.0.3';
+  const APP_VERSION = '1.0.4';
   const C = window.Capacitor;
   const App = api.plugin('App');
   const view = document.getElementById('view');
@@ -187,7 +187,7 @@
           el('p', { class: 'mu' }, p.help));
         if (p.kind === 'img') {
           if (p.done) { const img = el('img', { class: 'thumb', alt: p.code }); card.append(img); api.image('dossiers/' + d.id + '/pieces/' + encodeURIComponent(p.code) + '/sheet').then((u) => { img.src = u; }).catch(() => img.remove()); }
-          if (edit) card.append(el('button', { class: 'ghost', onclick: () => alert('L’éditeur de planches arrive dans la prochaine version de l’application (photo, annotations, émojis…). En attendant, vous pouvez compléter cette pièce depuis le site.') }, p.done ? 'Modifier la planche' : 'Ouvrir l’éditeur'));
+          if (edit) card.append(el('button', { class: p.done ? 'ghost' : '', onclick: () => show(editorScreen, { d, p }) }, p.done ? 'Modifier la planche' : 'Ouvrir l’éditeur'));
         } else {
           if (edit) {
             const f = el('form', { onsubmit: (e) => { e.preventDefault(); submitting(f, async () => {
@@ -215,6 +215,20 @@
         actions);
     }));
   }
+
+  // Éditeur de planches : celui du site (js/editor.js), branché sur l'API par js/editor-io.js
+  function editorScreen({ d, p }) {
+    return el('div', {}, back$(), el('h2', {}, p.code + ' – ' + p.title), el('p', { class: 'mu' }, p.help),
+      later(async (box) => {
+        const j = await api.get('dossiers/' + d.id + '/pieces/' + encodeURIComponent(p.code));
+        const u = state.user, root = el('div', { class: 'ed' });
+        fill(box, root);
+        window.DPEditor.open(root, { id: d.id, c: p.code, t: '', admin: u.role === 'admin', title: p.title.toUpperCase(), head: d.head, wm: true,
+          emojis: state.config.emojis || [], base: j.has_base, data: j.data, meta: { titre: d.titre, adresse: d.adresse, parcelle: d.parcelle, owner: u.name } });
+      }));
+  }
+  // Appelé par l'éditeur après l'enregistrement ou sur « Retour au dossier » : on revient à la fiche, rechargée
+  window.appNav = { saved: () => back(), back: () => back() };
 
   function updateScreen() {
     return el('div', {}, el('img', { class: 'logo', src: 'assets/logo.png', alt: 'DOSSIERUrba' }),
