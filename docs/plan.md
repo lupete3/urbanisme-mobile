@@ -9,7 +9,7 @@ Cahier des charges complet : `docs/plan-mobile.md` dans le dépôt du site.
 | 2.3 Dossiers | Accueil (formule d'accès, zone de la parcelle, liste avec avancement), création DP / AP / PD (PC / PL / AT « pas encore disponible »), fiche du dossier (Cerfa, pièces avec aides, planches avec filigrane, notice DP11 / PD9), modifier un dossier en attente, supprimer un dossier | ✅ 15/11/2026 |
 | 2.4 Éditeur | Éditeur du site réutilisé (`www/js/editor.js`, copié par `npm run sync`), branché sur l'API par `www/js/editor-io.js` : appareil photo et galerie natifs (plugin Camera), annotations, émojis, bibliothèque (y compris objets partagés), Annuler / Rétablir, filigrane BROUILLON, enregistrement puis retour à la fiche | ✅ 15/11/2026 |
 | 2.5 Envoi et PDF | Page de garde et notice dessinées sur le téléphone (fonctions partagées de `editor.js`), envoi selon la formule d'accès (finalisé tout de suite si gratuit, sinon en attente de paiement avec le prix), aperçu filigrané, PDF complet enregistré dans le cache puis partagé (plugins Filesystem et Share) | ✅ 15/11/2026 |
-| 2.6 Profil | Modifier ses informations et ses choix, export des données, suppression du compte | — |
+| 2.6 Profil | Bouton « Mon profil » sur l'accueil ; informations (nom, e-mail, téléphone), mot de passe (déconnecte les autres appareils), consentements facultatifs et textes légaux, export des données (JSON partagé), suppression du compte avec mot de passe (exigence Google Play), déconnexion | ✅ 15/11/2026 |
 | 2.7 Finitions | Icône, écran de démarrage, notifications (Firebase), version minimale, tests sur appareil | — |
 
 ## Choix techniques
@@ -53,3 +53,5 @@ Cahier des charges complet : `docs/plan-mobile.md` dans le dépôt du site.
 **Testé le 15/11/2026, étape 2.4** (navigateur, format mobile, copie locale du site) : éditeur du site sans régression (photo collée, objet de bibliothèque, enregistrement) ; dans l'appli : ouverture de l'éditeur AP5, objet partagé par l'admin chargé via l'API, émoji, enregistrement, retour à la fiche (pièce cochée, avancement 1 / 7), réouverture avec photo et annotations rechargées. APK 1.0.4 compilé. Appareil photo natif : à vérifier sur téléphone.
 
 **Testé le 15/11/2026, étape 2.5** (navigateur, copie locale du site) : notice PD9 cochée dès que le texte est rempli, aperçu PDF filigrané téléchargé, finalisation en mode gratuit (dossier « Débloqué »), PDF complet sans filigrane, page de garde et notice générées correctement. APK 1.0.5 compilé. Partage du PDF : validé sur le téléphone du client.
+
+**Testé le 15/11/2026, étape 2.6** (navigateur, copie locale du site) : infos enregistrées côté serveur, mauvais mot de passe refusé puis changement réussi, choix de consentement enregistrés, export JSON, suppression du compte (retour à la connexion, connexion ensuite refusée). APK 1.0.6 compilé.

@@ -1,6 +1,6 @@
 // DOSSIERUrba Mobile : navigation et écrans (compte, consentement, dossiers).
 (() => {
-  const APP_VERSION = '1.0.5';
+  const APP_VERSION = '1.0.6';
   const C = window.Capacitor;
   const App = api.plugin('App');
   const view = document.getElementById('view');
@@ -139,7 +139,7 @@
   function homeScreen() {
     const u = state.user, msg = state.config && state.config.message;
     return el('div', {},
-      el('h1', {}, 'Bonjour ' + u.name.split(' ')[0]),
+      el('div', { class: 'row' }, el('h1', {}, 'Bonjour ' + u.name.split(' ')[0]), el('button', { class: 'small ghost', onclick: () => show(profileScreen) }, 'Mon profil')),
       msg ? el('div', { class: 'card note' }, msg) : null,
       zoneLink(),
       el('div', { class: 'row', style: 'margin-top:18px' }, el('h2', { style: 'margin:0' }, 'Mes dossiers'), el('button', { class: 'small', onclick: () => show(newDossierScreen) }, '＋ Nouveau')),
@@ -238,15 +238,19 @@
   }
   const toBase64 = (blob) => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = () => no(r.error); r.readAsDataURL(blob); });
   // PDF : enregistré dans le cache de l'appli puis proposé au partage (mail, WhatsApp, Drive, lecteur PDF…)
-  async function openPdf(d) {
-    const r = await api.raw('dossiers/' + d.id + '/pdf'), blob = await r.blob();
-    const m = /filename="([^"]+)"/.exec(r.headers.get('Content-Disposition') || ''), name = m ? m[1] : 'DOSSIERUrba-' + d.type + '-' + d.id + '.pdf';
+  // Fichier enregistré dans le cache de l'appli puis proposé au partage (mail, WhatsApp, Drive, lecteur…)
+  async function shareFile(name, blob, text, dialogTitle) {
     const FS = api.plugin('Filesystem'), Share = api.plugin('Share');
     if (FS && Share) {
       const w = await FS.writeFile({ path: name, data: await toBase64(blob), directory: 'CACHE' });
-      try { await Share.share({ title: name, text: 'Dossier ' + d.type + ' – ' + d.titre, files: [w.uri], dialogTitle: 'Ouvrir ou partager le PDF' }); }
+      try { await Share.share({ title: name, text, files: [w.uri], dialogTitle }); }
       catch (e) { if (!/cancel|annul/i.test(e && e.message || '')) throw e; }
     } else { const u = URL.createObjectURL(blob), a = el('a', { href: u, download: name }); document.body.append(a); a.click(); a.remove(); }
+  }
+  async function openPdf(d) {
+    const r = await api.raw('dossiers/' + d.id + '/pdf'), blob = await r.blob();
+    const m = /filename="([^"]+)"/.exec(r.headers.get('Content-Disposition') || ''), name = m ? m[1] : 'DOSSIERUrba-' + d.type + '-' + d.id + '.pdf';
+    await shareFile(name, blob, 'Dossier ' + d.type + ' – ' + d.titre, 'Ouvrir ou partager le PDF');
   }
   function sendBlock(d, access) {
     const edit = d.status === 'brouillon', hasSheet = d.pieces.some((p) => p.done);
@@ -261,6 +265,54 @@
         await prepSheets(d); const j = await api.post('dossiers/' + d.id + '/submit'); alert(j.message); show(dossierScreen, d.id, false);
       }) }, free ? 'Finaliser le dossier et obtenir le PDF' : 'Envoyer le dossier pour validation'),
       pdfBtn];
+  }
+
+  /* ---------- Mon profil (étape 2.6) ---------- */
+  // Formulaire du profil : envoi avec bouton occupé, message de réussite ou d'erreur sous le formulaire
+  function pform(title, kids, label, fn, cls = '') {
+    const ok = el('p', { class: 'ok' });
+    const f = el('form', { class: 'card ' + cls, onsubmit: (e) => { e.preventDefault(); ok.textContent = ''; submitting(f, async () => {
+      try { const m = await fn(f); if (m) ok.textContent = m; } catch (x) { if (!(await guard(x))) throw x; }
+    }); } }, el('h2', {}, title), kids, el('p', { class: 'err' }), ok, el('button', { type: 'submit', class: cls ? 'danger' : '' }, label));
+    return f;
+  }
+  function profileScreen() {
+    const u = state.user;
+    const info = pform('Mes informations', [
+      field('Nom complet', { name: 'name', type: 'text', required: true, autocomplete: 'name', value: u.name }),
+      field('Adresse e-mail', { name: 'email', type: 'email', required: true, autocomplete: 'email', value: u.email }),
+      field('Téléphone (facultatif)', { name: 'phone', type: 'tel', autocomplete: 'tel', value: u.phone || '' }),
+    ], 'Enregistrer', async (f) => { const j = await api.put('me', { name: f.name.value, email: f.email.value, phone: f.phone.value }); state.user = j.user; return 'Informations enregistrées.'; });
+    const pass = pform('Mot de passe', [
+      field('Mot de passe actuel', { name: 'current', type: 'password', required: true, autocomplete: 'current-password' }),
+      field('Nouveau mot de passe (10 caractères minimum)', { name: 'new', type: 'password', required: true, minlength: 10, autocomplete: 'new-password' }),
+      field('Confirmer le nouveau mot de passe', { name: 'new2', type: 'password', required: true, minlength: 10, autocomplete: 'new-password' }),
+    ], 'Modifier le mot de passe', async (f) => {
+      if (f.new.value !== f.new2.value) throw new Error('Les deux nouveaux mots de passe sont différents.');
+      await api.post('me/password', { current: f.current.value, new: f.new.value }); f.reset();
+      return 'Mot de passe modifié. Vos autres appareils ont été déconnectés.';
+    });
+    const consent = pform('Mes données et consentements', [
+      el('p', { class: 'mu' }, 'Conditions acceptées : version ' + (u.consent.version || '—') + '. ', legalLink('cgu', 'Conditions d’utilisation'), ' · ', legalLink('privacy', 'Confidentialité')),
+      el('label', { class: 'ck' }, el('input', { type: 'checkbox', name: 'analytics', checked: u.consent.analytics }), el('span', {}, 'J’accepte la mesure d’audience anonyme (facultatif)')),
+      el('label', { class: 'ck' }, el('input', { type: 'checkbox', name: 'marketing', checked: u.consent.marketing }), el('span', {}, 'J’accepte de recevoir des informations par e-mail (facultatif)')),
+    ], 'Enregistrer mes choix', async (f) => { const j = await api.post('me/consent', { cgu: true, analytics: f.analytics.checked, marketing: f.marketing.checked }); state.user = j.user; return 'Vos choix sont enregistrés.'; });
+    const exp = el('button', { class: 'ghost', onclick: (e) => busy(e.currentTarget, async () => {
+      const j = await api.get('me/export'); delete j.ok;
+      await shareFile('mes-donnees-DOSSIERUrba.json', new Blob([JSON.stringify(j, null, 2)], { type: 'application/json' }), 'Mes données DOSSIERUrba', 'Enregistrer ou partager mes données');
+    }) }, 'Télécharger mes données');
+    const del = pform('Supprimer mon compte', [
+      el('p', { class: 'mu' }, 'Supprime définitivement votre compte, tous vos dossiers, leurs images, vos objets de bibliothèque et vos consentements. Cette action est irréversible.'),
+      field('Mot de passe pour confirmer', { name: 'password', type: 'password', required: true, autocomplete: 'current-password' }),
+    ], 'Supprimer mon compte', async (f) => {
+      if (!confirm('Supprimer définitivement votre compte et toutes vos données ? Cette action est irréversible.')) return '';
+      await api.post('me/delete', { password: f.password.value });
+      await api.setToken(null); state.user = null; reset(loginScreen); alert('Votre compte et vos données ont été supprimés.'); return '';
+    }, 'danger-zone');
+    return el('div', {}, back$(), el('h1', {}, 'Mon profil'), el('p', { class: 'mu' }, u.email),
+      el('div', { class: 'card acc' }, u.access.text), info, pass, consent, exp, del,
+      el('button', { class: 'ghost', onclick: logout }, 'Se déconnecter'),
+      el('p', { class: 'links mu' }, 'DOSSIERUrba · version ' + APP_VERSION));
   }
 
   // Éditeur de planches : celui du site (js/editor.js), branché sur l'API par js/editor-io.js
