@@ -60,3 +60,14 @@ Cahier des charges complet : `docs/plan-mobile.md` dans le dépôt du site.
 **Testé le 15/11/2026, étape 2.7** (navigateur, copie locale du site) : compteur de notifications sur l'accueil, écran Notifications (non lue mise en avant, marquée lue), enregistrement d'un téléphone (`me/device`), chaîne d'envoi Firebase avec une clé factice (jeton signé, refus de Google noté au journal sans bloquer). APK 1.0.7 compilé (notifications push désactivées tant que `google-services.json` est absent).
 
 **Firebase (15/11/2026)** : projet `dossierurba-f9a48`, appli `com.dossierurba.app`. `android/app/google-services.json` placé sur le poste de développement (non versionné, à conserver aussi en lieu sûr). APK 1.0.8 compilé avec les notifications push actives : notification de test reçue sur le téléphone du client. Clé du compte de service : à coller dans Admin → Accès et tarifs (jamais dans Git).
+
+# Phase 3 : publication Google Play
+
+Guide complet, fiche et réponses aux questionnaires : [play-store.md](play-store.md).
+
+| Étape | Contenu | État |
+|---|---|---|
+| 3.1 Signature | Clé d'upload hors Git, signature release dans `build.gradle`, `npm run aab` | ✅ 15/11/2026 |
+| 3.2 Fiche | Icône 512, bannière 1024×500 (`store/`), textes, sécurité des données, classification | ✅ 15/11/2026 (captures à faire sur téléphone) |
+| 3.3 Test fermé | Compte Play Console, 12 testeurs pendant 14 jours | ⏳ côté client |
+| 3.4 Production | Demande d'accès en production puis publication | ⏳ |

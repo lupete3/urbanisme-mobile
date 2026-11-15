@@ -5,7 +5,8 @@
   "scripts": {
     "sync": "node scripts/copy-core.js && cap sync android",
     "open": "cap open android",
-    "apk": "npm run sync && cd android && gradlew.bat assembleDebug"
+    "apk": "npm run sync && cd android && .\\gradlew.bat assembleDebug",
+    "aab": "npm run sync && cd android && .\\gradlew.bat bundleRelease"
   },
   "keywords": [],
   "author": "",
