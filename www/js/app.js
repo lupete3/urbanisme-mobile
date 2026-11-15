@@ -1,6 +1,6 @@
 // DOSSIERUrba Mobile : navigation et écrans (compte, consentement, dossiers).
 (() => {
-  const APP_VERSION = '1.0.7';
+  const APP_VERSION = '1.0.8';
   const C = window.Capacitor;
   const App = api.plugin('App');
   const view = document.getElementById('view');

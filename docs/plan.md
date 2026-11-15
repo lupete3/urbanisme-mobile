@@ -58,3 +58,5 @@ Cahier des charges complet : `docs/plan-mobile.md` dans le dépôt du site.
 **Testé le 15/11/2026, étape 2.6** (navigateur, copie locale du site) : infos enregistrées côté serveur, mauvais mot de passe refusé puis changement réussi, choix de consentement enregistrés, export JSON, suppression du compte (retour à la connexion, connexion ensuite refusée). APK 1.0.6 compilé.
 
 **Testé le 15/11/2026, étape 2.7** (navigateur, copie locale du site) : compteur de notifications sur l'accueil, écran Notifications (non lue mise en avant, marquée lue), enregistrement d'un téléphone (`me/device`), chaîne d'envoi Firebase avec une clé factice (jeton signé, refus de Google noté au journal sans bloquer). APK 1.0.7 compilé (notifications push désactivées tant que `google-services.json` est absent).
+
+**Firebase (15/11/2026)** : projet `dossierurba-f9a48`, appli `com.dossierurba.app`. `android/app/google-services.json` placé sur le poste de développement (non versionné, à conserver aussi en lieu sûr). APK 1.0.8 compilé avec les notifications push actives. Clé du compte de service : à coller dans Admin → Accès et tarifs (jamais dans Git).
