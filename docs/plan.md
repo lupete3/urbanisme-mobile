@@ -17,3 +17,10 @@ Cahier des charges complet : `docs/plan-mobile.md` dans le dépôt du site.
 - **Interface** : HTML / CSS / JavaScript simples dans `www/`, comme le site. On réutilise directement le code de l'éditeur, sans framework ni étape de build.
 - **API** : appels `fetch` vers `https://travaux.pftecho.com/api/` avec `Authorization: Bearer <jeton>`. Le serveur autorise déjà l'origine `https://localhost` de l'appli Android (CORS).
 - **Plugins Capacitor prévus** : Camera, Filesystem, Share, Preferences, SplashScreen, StatusBar, Push Notifications.
+
+## Notes de mise en place (15/11/2026)
+
+- **Gradle 8.13** (`android/gradle/wrapper/gradle-wrapper.properties`) au lieu du 8.14.3 proposé par Capacitor : il était déjà installé sur le poste, et le téléchargement du 8.14.3 échouait (délai dépassé). Il est compatible avec l'Android Gradle Plugin 8.13.0 du projet. Délai réseau du wrapper porté à 180 s.
+- `android/local.properties` (non versionné) : `sdk.dir=C:/Users/Placide/AppData/Local/Android/Sdk`, avec des barres obliques normales. Les barres inverses non doublées provoquent l'erreur « Invalid file path ».
+- La compilation demande **Java 21** : `JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"`. Android Studio l'utilise automatiquement.
+- Premier APK de test compilé : `android/app/build/outputs/apk/debug/app-debug.apk`. L'API en ligne répond, et l'origine `https://localhost` est autorisée.
