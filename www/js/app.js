@@ -1,6 +1,6 @@
-// DOSSIERUrba Mobile : navigation et écrans (étape 2.2 : compte et consentement).
+// DOSSIERUrba Mobile : navigation et écrans (compte, consentement, dossiers).
 (() => {
-  const APP_VERSION = '1.0.2';
+  const APP_VERSION = '1.0.3';
   const C = window.Capacitor;
   const App = api.plugin('App');
   const view = document.getElementById('view');
@@ -119,17 +119,101 @@
     return el('div', {}, el('img', { class: 'logo', src: 'assets/logo.png', alt: 'DOSSIERUrba' }), f);
   }
 
-  // Accueil provisoire : les dossiers arrivent à l'étape 2.3
+  /* ---------- Dossiers (étape 2.3) ---------- */
+  // Erreur d'API pendant l'utilisation : session expirée -> connexion ; conditions à accepter -> consentement
+  async function guard(e, box) {
+    if (e.status === 401) { await api.setToken(null); state.user = null; reset(loginScreen); return true; }
+    if (e.code === 'consent_required') { try { state.user = (await api.get('me')).user; } catch (x) {} reset(consentScreen); return true; }
+    if (box) fill(box, el('div', { class: 'card' }, el('p', { class: 'err' }, e.message), el('button', { onclick: () => { const [s, a] = stack[stack.length - 1]; show(s, a, false); } }, 'Réessayer')));
+    return false;
+  }
+  // Zone qui se remplit quand les données arrivent
+  function later(fn) { const box = el('div', {}, el('p', { class: 'mu', style: 'text-align:center;margin:24px 0' }, 'Chargement…')); fn(box).catch((e) => guard(e, box)); return box; }
+  const back$ = () => el('div', { class: 'bar' }, el('button', { type: 'button', class: 'ghost', onclick: back }, '← Retour'));
+  const chip = (t) => el('span', { class: 'chip' }, t);
+  const badge = (status, label) => el('span', { class: 'badge b-' + status }, label);
+  const progress = (p) => [el('div', { class: 'prog' }, el('i', { style: 'width:' + (p.required ? Math.round(p.done / p.required * 100) : 0) + '%' })), el('small', { class: 'mu' }, p.done + ' / ' + p.required + ' pièces obligatoires')];
+  // Retire l'écran courant de l'historique avant d'en ouvrir un autre (ex. : création -> dossier)
+  function replace(screen, arg) { stack.pop(); show(screen, arg); }
+
   function homeScreen() {
     const u = state.user, msg = state.config && state.config.message;
     return el('div', {},
       el('h1', {}, 'Bonjour ' + u.name.split(' ')[0]),
       msg ? el('div', { class: 'card note' }, msg) : null,
-      el('div', { class: 'card acc' }, u.access.text),
       zoneLink(),
-      el('div', { class: 'card', style: 'margin-top:14px' }, el('h2', {}, 'Mes dossiers'), el('p', { class: 'mu' }, 'La constitution des dossiers DP, AP et PD arrive dans la prochaine version de l’application.')),
+      el('div', { class: 'row', style: 'margin-top:18px' }, el('h2', { style: 'margin:0' }, 'Mes dossiers'), el('button', { class: 'small', onclick: () => show(newDossierScreen) }, '＋ Nouveau')),
+      later(async (box) => {
+        const j = await api.get('dossiers');
+        state.user.access = j.access;
+        fill(box, el('div', { class: 'card acc' }, j.access.text),
+          j.dossiers.length ? j.dossiers.map((d) => el('a', { class: 'card dc', href: '#', onclick: (e) => { e.preventDefault(); show(dossierScreen, d.id); } },
+            el('div', { class: 'row' }, el('b', {}, d.titre), badge(d.status, d.status_label)),
+            el('p', { class: 'mu', style: 'margin:4px 0 8px' }, chip(d.type), ' ', d.adresse),
+            progress(d.progress)))
+            : el('div', { class: 'card empty' }, el('p', {}, 'Aucun dossier pour le moment.'), el('button', { onclick: () => show(newDossierScreen) }, 'Créer mon premier dossier')));
+      }),
       el('button', { class: 'ghost', onclick: logout }, 'Se déconnecter'),
       el('p', { class: 'links mu' }, 'Version ' + APP_VERSION));
+  }
+
+  function newDossierScreen() {
+    const types = state.config.types;
+    let chosen = (types.find((t) => t.available) || {}).code;
+    const pick = el('div', { class: 'types' }, types.map((t) => el('label', { class: 'type' + (t.available ? '' : ' off') },
+      el('input', { type: 'radio', name: 'type', value: t.code, checked: t.code === chosen, disabled: !t.available, onchange: () => { chosen = t.code; } }),
+      el('span', { class: 'chip' }, t.code), el('span', {}, t.label, t.available ? null : el('small', {}, ' · ' + (t.note || 'À venir'))))));
+    const f = el('form', { class: 'card', onsubmit: (e) => { e.preventDefault(); submitting(f, async () => {
+      try { const j = await api.post('dossiers', { type: chosen, titre: f.titre.value, adresse: f.adresse.value, parcelle: f.parcelle.value }); replace(dossierScreen, j.dossier.id); }
+      catch (x) { if (!(await guard(x))) throw x; }
+    }); } },
+      el('h2', {}, 'Nouveau dossier'),
+      el('label', {}, 'Type de dossier'), pick,
+      field('Intitulé du projet', { name: 'titre', type: 'text', required: true, placeholder: 'Ex : Aménagement des combles' }),
+      field('Adresse du projet', { name: 'adresse', type: 'text', required: true, autocomplete: 'street-address' }),
+      field('Numéro de parcelle', { name: 'parcelle', type: 'text', required: true, placeholder: 'Ex : AB 123' }),
+      el('p', { class: 'err' }),
+      el('button', { type: 'submit' }, 'Créer le dossier'));
+    return el('div', {}, back$(), f);
+  }
+
+  function dossierScreen(id) {
+    return el('div', {}, back$(), later(async (box) => {
+      const { dossier: d } = await api.get('dossiers/' + id);
+      const edit = d.status === 'brouillon';
+      const pieces = d.pieces.map((p) => {
+        const card = el('div', { class: 'card piece' },
+          el('div', { class: 'row' }, el('b', {}, p.code + ' – ' + p.title), p.done ? el('span', { class: 'ok' }, '✔') : p.optional ? el('span', { class: 'badge b-opt' }, 'Facultatif') : el('span', { class: 'todo' }, 'à compléter')),
+          el('p', { class: 'mu' }, p.help));
+        if (p.kind === 'img') {
+          if (p.done) { const img = el('img', { class: 'thumb', alt: p.code }); card.append(img); api.image('dossiers/' + d.id + '/pieces/' + encodeURIComponent(p.code) + '/sheet').then((u) => { img.src = u; }).catch(() => img.remove()); }
+          if (edit) card.append(el('button', { class: 'ghost', onclick: () => alert('L’éditeur de planches arrive dans la prochaine version de l’application (photo, annotations, émojis…). En attendant, vous pouvez compléter cette pièce depuis le site.') }, p.done ? 'Modifier la planche' : 'Ouvrir l’éditeur'));
+        } else {
+          if (edit) {
+            const f = el('form', { onsubmit: (e) => { e.preventDefault(); submitting(f, async () => {
+              try { await api.put('dossiers/' + d.id + '/description', { description: f.description.value }); show(dossierScreen, d.id, false); }
+              catch (x) { if (!(await guard(x))) throw x; }
+            }); } }, el('textarea', { name: 'description', rows: 6, placeholder: d.type === 'PD' ? 'Décrivez les précautions prises pendant la démolition…' : 'Décrivez vos travaux : matériaux, couleurs, dimensions…' }), el('p', { class: 'err' }), el('button', { type: 'submit' }, 'Enregistrer le texte'));
+            f.description.value = d.description; card.append(f);
+          } else card.append(el('p', { class: 'pre' }, d.description || '—'));
+        }
+        return card;
+      });
+      const actions = [];
+      if (d.status === 'en_attente') actions.push(el('button', { class: 'ghost', onclick: async () => { if (!confirm('Le dossier repasse en brouillon pour être modifié. Vous devrez le soumettre à nouveau.')) return; try { await api.post('dossiers/' + d.id + '/reopen'); show(dossierScreen, d.id, false); } catch (x) { if (!(await guard(x))) alert(x.message); } } }, 'Modifier le dossier'));
+      if (d.status !== 'paye') actions.push(el('button', { class: 'danger', onclick: async () => { if (!confirm('Supprimer définitivement ce dossier et toutes ses pièces ? Cette action est irréversible.')) return; try { await api.del('dossiers/' + d.id); back(); } catch (x) { if (!(await guard(x))) alert(x.message); } } }, 'Supprimer le dossier'));
+      fill(box,
+        el('div', { class: 'row', style: 'align-items:flex-start' }, el('h1', { style: 'margin-top:0' }, d.titre), badge(d.status, d.status_label)),
+        el('p', { class: 'mu' }, chip(d.type), ' ', d.type_label, ' · ', d.adresse, ' – parcelle ', d.parcelle),
+        progress(d.progress),
+        el('div', { class: 'card cerfa', style: 'margin-top:14px' }, el('b', {}, 'Cerfa n°' + d.cerfa.numero + ' – Formulaire officiel'),
+          el('p', { class: 'mu' }, 'Téléchargez le formulaire, imprimez-le et remplissez-le au stylo. Il se dépose en mairie avec les pièces ci-dessous.'),
+          el('a', { class: 'btn', href: d.cerfa.url, target: '_blank', rel: 'noopener' }, 'Accéder au Cerfa ↗')),
+        pieces,
+        edit ? el('div', { class: 'card note' }, d.missing.length ? ['Pièces obligatoires à compléter : ', el('b', {}, d.missing.join(', ')), '.'] : 'Toutes les pièces obligatoires sont prêtes. L’envoi du dossier et le PDF arrivent dans une prochaine version de l’application.') : null,
+        d.status === 'paye' ? el('div', { class: 'card acc' }, 'Dossier débloqué : le PDF complet est disponible sur le site (dans l’application à la prochaine version).') : null,
+        actions);
+    }));
   }
 
   function updateScreen() {

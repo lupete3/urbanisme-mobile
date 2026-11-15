@@ -36,3 +36,24 @@ ul{padding-left:20px;margin:0 0 12px}li{margin:4px 0}
 .sheet h3{margin:16px 0 6px}
 .spin{width:22px;height:22px;border:3px solid #fff6;border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite}
 @keyframes sp{to{transform:rotate(1turn)}}
+
+/* Dossiers (étape 2.3) */
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+button.small{width:auto;margin:0;padding:8px 14px}
+button.danger{background:transparent;color:var(--er);border-color:var(--er)}
+.dc{display:block;color:inherit;text-decoration:none}
+.chip{display:inline-block;min-width:30px;text-align:center;font-size:12px;font-weight:800;border:1px solid currentColor;border-radius:5px;padding:1px 5px;color:var(--navy)}
+.badge{font-size:12px;font-weight:700;border:1px solid currentColor;border-radius:99px;padding:2px 9px;white-space:nowrap}
+.b-brouillon,.b-opt{color:var(--mu)}.b-en_attente{color:#b45309}.b-paye{color:var(--green)}
+.todo{color:var(--er);font-size:13px;font-weight:600;white-space:nowrap}
+.prog{height:6px;background:var(--bd);border-radius:6px;overflow:hidden;margin:4px 0}.prog i{display:block;height:100%;background:var(--green)}
+.empty{text-align:center}
+.types{display:flex;flex-direction:column;gap:6px}
+.type{display:flex;align-items:center;gap:10px;font-weight:600;margin:0;padding:10px;border:1px solid var(--bd);border-radius:8px}
+.type input{width:18px;height:18px;margin:0;accent-color:var(--navy)}
+.type.off{opacity:.55;font-weight:400}.type small{color:var(--mu)}
+.type:has(input:checked){border-color:var(--navy);box-shadow:0 0 0 1px var(--navy)}
+.piece .thumb{display:block;width:100%;border:1px solid var(--bd);border-radius:6px;margin:6px 0}
+.cerfa{border-left:4px solid var(--navy)}
+textarea{width:100%;font:inherit;padding:12px 14px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);margin-top:6px}
+.pre{white-space:pre-wrap}

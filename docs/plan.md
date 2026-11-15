@@ -6,8 +6,8 @@ Cahier des charges complet : `docs/plan-mobile.md` dans le dépôt du site.
 |---|---|---|
 | 2.1 Projet | Capacitor 8 + Android, identifiant `com.dossierurba.app`, écran provisoire qui vérifie l'API | ✅ 15/11/2026 |
 | 2.2 Compte | Écran d'ouverture, consentement, inscription, connexion, mot de passe oublié, jeton conservé dans le stockage privé de l'appli (Preferences), bouton Retour Android, écran « mise à jour nécessaire », écran hors connexion | ✅ 15/11/2026 |
-| 2.3 Dossiers | Accueil (formule d'accès, zone de la parcelle), liste, création, détail des pièces, lien Cerfa | ⏳ |
-| 2.4 Éditeur | Reprise de `editor.js` du site, appareil photo natif, galerie, émojis, bibliothèque, Annuler / Rétablir | — |
+| 2.3 Dossiers | Accueil (formule d'accès, zone de la parcelle, liste avec avancement), création DP / AP / PD (PC / PL / AT « pas encore disponible »), fiche du dossier (Cerfa, pièces avec aides, planches avec filigrane, notice DP11 / PD9), modifier un dossier en attente, supprimer un dossier | ✅ 15/11/2026 |
+| 2.4 Éditeur | Reprise de `editor.js` du site, appareil photo natif, galerie, émojis, bibliothèque, Annuler / Rétablir | ⏳ (le bouton « Ouvrir l’éditeur » affiche pour l’instant un message) |
 | 2.5 Envoi et PDF | Page de garde et notice générées sur le téléphone, envoi, téléchargement et partage du PDF | — |
 | 2.6 Profil | Modifier ses informations et ses choix, export des données, suppression du compte | — |
 | 2.7 Finitions | Icône, écran de démarrage, notifications (Firebase), version minimale, tests sur appareil | — |
@@ -45,3 +45,5 @@ Cahier des charges complet : `docs/plan-mobile.md` dans le dépôt du site.
 - **Plugins natifs sans outil de build** : `Capacitor.registerPlugin` n'existe pas dans le seul pont natif d'Android. Il faut charger le module de base `www/js/capacitor.js`, copié depuis `node_modules/@capacitor/core/dist/` par `npm run sync` (`scripts/copy-core.js`). Toujours utiliser `npm run sync`, et non `npx cap sync` seul. Symptôme observé en 1.0.0 : appli bloquée sur le logo. En 1.0.1 : message « C.registerPlugin is not a function ».
 - **Filet de sécurité** (`www/js/boot.js`) : toute erreur au démarrage s'affiche à l'écran. Après 10 s sans démarrage, un message remplace le logo. Les appels réseau ont un délai de 20 s, et le stockage natif un délai de 4 s, avec repli sur localStorage.
 - **Versions de test** : 1.0.0 (bloquée), 1.0.1 (diagnostic), 1.0.2 (correction des plugins), validée sur le téléphone du client le 15/11/2026.
+
+**Testé le 15/11/2026, étape 2.3** (navigateur, format mobile, copie locale du site) : liste et avancement, ouverture d'un dossier, planche protégée affichée (filigrane BROUILLON), notice enregistrée (pièces manquantes mises à jour), choix du type (PC / PL / AT désactivés), création d'un AP (7 pièces), retour à l'accueil, suppression d'un dossier. APK 1.0.3 compilé.
