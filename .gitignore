@@ -1,0 +1,8 @@
+node_modules/
+.DS_Store
+*.log
+# Clés de signature et secrets : jamais dans Git
+*.jks
+*.keystore
+keystore.properties
+google-services.json

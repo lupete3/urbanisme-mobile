@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>DOSSIERUrba</title>
+<style>
+:root{--navy:#0d3466;--green:#2e8b45;--bg:#fff;--tx:#14213d;--mu:#5b6678}
+@media(prefers-color-scheme:dark){:root{--bg:#0c111d;--tx:#e6ebf5;--mu:#93a0b8}}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;box-sizing:border-box;text-align:center}
+img{width:min(64vw,280px);background:#fff;border-radius:16px;padding:8px}
+p{margin:0;color:var(--mu)}
+#st{font-weight:600;color:var(--tx)}
+</style>
+</head>
+<body>
+<main>
+<img src="assets/logo.png" alt="DOSSIERUrba">
+<p id="st">Connexion au serveur…</p>
+<p id="info"></p>
+</main>
+<script>
+// Écran provisoire (phase 2, étape 1) : vérifie que l'appli joint l'API du site.
+const API='https://travaux.pftecho.com/api/';
+fetch(API+'config').then(r=>r.json()).then(j=>{
+ document.getElementById('st').textContent='Serveur joint ✔';
+ document.getElementById('info').textContent=j.types.filter(t=>t.available).map(t=>t.code).join(' · ')+' — accès : '+j.access.label;
+}).catch(e=>{document.getElementById('st').textContent='Serveur injoignable';document.getElementById('info').textContent=String(e);});
+</script>
+</body>
+</html>
