@@ -44,4 +44,4 @@ Cahier des charges complet : `docs/plan-mobile.md` dans le dépôt du site.
 
 - **Plugins natifs sans outil de build** : `Capacitor.registerPlugin` n'existe pas dans le seul pont natif d'Android. Il faut charger le module de base `www/js/capacitor.js`, copié depuis `node_modules/@capacitor/core/dist/` par `npm run sync` (`scripts/copy-core.js`). Toujours utiliser `npm run sync`, et non `npx cap sync` seul. Symptôme observé en 1.0.0 : appli bloquée sur le logo. En 1.0.1 : message « C.registerPlugin is not a function ».
 - **Filet de sécurité** (`www/js/boot.js`) : toute erreur au démarrage s'affiche à l'écran. Après 10 s sans démarrage, un message remplace le logo. Les appels réseau ont un délai de 20 s, et le stockage natif un délai de 4 s, avec repli sur localStorage.
-- **Versions de test** : 1.0.0 (bloquée), 1.0.1 (diagnostic), 1.0.2 (correction des plugins).
+- **Versions de test** : 1.0.0 (bloquée), 1.0.1 (diagnostic), 1.0.2 (correction des plugins), validée sur le téléphone du client le 15/11/2026.
