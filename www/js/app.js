@@ -1,6 +1,6 @@
 // DOSSIERUrba Mobile : navigation et écrans (étape 2.2 : compte et consentement).
 (() => {
-  const APP_VERSION = '1.0.0';
+  const APP_VERSION = '1.0.1';
   const C = window.Capacitor;
   const App = api.native ? C.registerPlugin('App') : null;
   const view = document.getElementById('view');
@@ -8,15 +8,17 @@
   const stack = []; // historique des écrans, pour le bouton Retour d'Android
 
   /* ---------- Outils ---------- */
-  const el = (t, a = {}, ...kids) => { const e = document.createElement(t); for (const [k, v] of Object.entries(a)) { if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (v !== false && v != null) e.setAttribute(k, v === true ? '' : v); } e.append(...kids.flat().filter((x) => x != null)); return e; };
+  const el = (t, a = {}, ...kids) => { const e = document.createElement(t); for (const [k, v] of Object.entries(a)) { if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (v !== false && v != null) e.setAttribute(k, v === true ? '' : v); } e.append(...flat(kids)); return e; };
+  const flat = (a) => a.reduce((r, x) => x == null || x === false ? r : r.concat(Array.isArray(x) ? flat(x) : [x]), []);
+  const fill = (node, ...kids) => { node.innerHTML = ''; node.append(...flat(kids)); };
   const field = (label, attrs) => [el('label', { for: attrs.name }, label), el('input', { id: attrs.name, ...attrs })];
-  function show(screen, arg, push = true) { if (push) stack.push([screen, arg]); view.replaceChildren(screen(arg)); window.scrollTo(0, 0); }
+  function show(screen, arg, push = true) { if (push) stack.push([screen, arg]); fill(view, screen(arg)); window.scrollTo(0, 0); window.appStarted = true; hideSplash(); }
   function reset(screen, arg) { stack.length = 0; show(screen, arg); }
   function back() { if (document.querySelector('.sheet')) { document.querySelector('.sheet').remove(); return; } if (stack.length > 1) { stack.pop(); const [s, a] = stack[stack.length - 1]; show(s, a, false); } else if (App) App.exitApp(); }
   // Bouton d'envoi : état « chargement » et message d'erreur sous le formulaire
   async function submitting(form, fn) {
     const b = form.querySelector('button[type=submit]'), err = form.querySelector('.err'), label = b.innerHTML;
-    err.textContent = ''; b.disabled = true; b.replaceChildren(el('span', { class: 'spin' }));
+    err.textContent = ''; b.disabled = true; fill(b, el('span', { class: 'spin' }));
     try { await fn(); } catch (e) { err.textContent = e.message; } finally { if (b.isConnected) { b.disabled = false; b.innerHTML = label; } }
   }
   const newer = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };
@@ -29,8 +31,8 @@
     try {
       const j = await api.get('legal/' + kind);
       const body = el('div'); body.innerHTML = j.html;
-      box.replaceChildren(el('h2', {}, j.title), el('p', { class: 'mu' }, 'Version ' + j.version), body, el('button', { onclick: () => sheet.remove() }, 'Fermer'));
-    } catch (e) { box.replaceChildren(el('p', { class: 'err' }, e.message), el('button', { onclick: () => sheet.remove() }, 'Fermer')); }
+      fill(box, el('h2', {}, j.title), el('p', { class: 'mu' }, 'Version ' + j.version), body, el('button', { onclick: () => sheet.remove() }, 'Fermer'));
+    } catch (e) { fill(box, el('p', { class: 'err' }, e.message), el('button', { onclick: () => sheet.remove() }, 'Fermer')); }
   }
   const legalLink = (kind, text) => el('a', { href: '#', onclick: (e) => { e.preventDefault(); legal(kind); } }, text);
   function consentBoxes(an = false, mk = false) {
@@ -151,7 +153,9 @@
     catch (e) { if (e.status === 401) { await api.setToken(null); reset(loginScreen); } else reset(offlineScreen, e.message); }
   }
 
-  if (App) App.addListener('backButton', back);
-  const splash = document.getElementById('splash');
-  Promise.all([start(), new Promise((r) => setTimeout(r, 1200))]).finally(() => { splash.classList.add('out'); setTimeout(() => splash.remove(), 400); });
+  // Le logo reste au moins 1,2 s, puis disparaît dès que le premier écran est prêt
+  const t0 = Date.now();
+  function hideSplash() { const s = document.getElementById('splash'); if (!s || s.classList.contains('out')) return; setTimeout(() => { s.classList.add('out'); setTimeout(() => s.remove(), 400); }, Math.max(0, 1200 - (Date.now() - t0))); }
+  try { if (App) App.addListener('backButton', back); } catch (e) { window.bootError && window.bootError('Bouton Retour : ' + e.message); }
+  start().catch((e) => reset(offlineScreen, e.message));
 })();

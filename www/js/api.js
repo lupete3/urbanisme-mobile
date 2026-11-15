@@ -12,10 +12,17 @@
   let base = PROD;
   if (!native) { try { base = localStorage.getItem('api') || PROD; } catch (e) {} }
 
+  // Appel natif avec délai de 4 s : si le plugin ne répond pas, on se rabat sur localStorage et on le signale
+  let prefsOk = !!Prefs;
+  const native4s = (p) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('Stockage natif sans réponse')), 4000))]);
+  async function nat(fn, fallback) {
+    if (prefsOk) { try { return await native4s(fn()); } catch (e) { prefsOk = false; window.bootError && window.bootError('Preferences : ' + e.message); } }
+    try { return fallback(); } catch (e) { return null; }
+  }
   const store = {
-    async get(k) { if (Prefs) return (await Prefs.get({ key: k })).value; try { return localStorage.getItem(k); } catch (e) { return null; } },
-    async set(k, v) { if (Prefs) return Prefs.set({ key: k, value: v }); try { localStorage.setItem(k, v); } catch (e) {} },
-    async remove(k) { if (Prefs) return Prefs.remove({ key: k }); try { localStorage.removeItem(k); } catch (e) {} },
+    get: (k) => nat(async () => (await Prefs.get({ key: k })).value, () => localStorage.getItem(k)),
+    set: (k, v) => nat(() => Prefs.set({ key: k, value: v }), () => localStorage.setItem(k, v)),
+    remove: (k) => nat(() => Prefs.remove({ key: k }), () => localStorage.removeItem(k)),
   };
 
   let token = null;
@@ -27,8 +34,12 @@
     if (body instanceof FormData) payload = body;
     else if (body !== undefined) { h['Content-Type'] = 'application/json'; payload = JSON.stringify(body); }
     let r;
-    try { r = await fetch(base + path, { method, headers: h, body: payload }); }
-    catch (e) { throw Object.assign(new Error('Pas de connexion au serveur. Vérifiez votre accès à Internet.'), { status: 0, code: 'offline' }); }
+    // Délai maximum de 20 s : sans réponse, on affiche une erreur au lieu d'attendre indéfiniment
+    const ctl = window.AbortController ? new AbortController() : null;
+    const timer = setTimeout(() => ctl && ctl.abort(), 20000);
+    try { r = await fetch(base + path, { method, headers: h, body: payload, signal: ctl ? ctl.signal : undefined }); }
+    catch (e) { throw Object.assign(new Error(e && e.name === 'AbortError' ? 'Le serveur ne répond pas (délai dépassé). Vérifiez votre connexion.' : 'Pas de connexion au serveur. Vérifiez votre accès à Internet. (' + (e && e.message || e) + ')'), { status: 0, code: 'offline' }); }
+    finally { clearTimeout(timer); }
     let j = null;
     try { j = await r.json(); } catch (e) {}
     if (!r.ok || !j || j.ok === false) {
