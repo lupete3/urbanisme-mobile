@@ -4,7 +4,11 @@
 (function () {
   var errors = [];
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
-  function hideSplash() { var s = document.getElementById('splash'); if (s && s.parentNode) s.parentNode.removeChild(s); }
+  function hideSplash() {
+    var s = document.getElementById('splash'); if (s && s.parentNode) s.parentNode.removeChild(s);
+    // Écran de démarrage natif d'Android : on le masque aussi (il disparaît de toute façon après 4 s)
+    try { var reg = window.capacitorExports && window.capacitorExports.registerPlugin; if (reg) reg('SplashScreen').hide(); else if (window.Capacitor && window.Capacitor.nativePromise) window.Capacitor.nativePromise('SplashScreen', 'hide', {}); } catch (e) {}
+  }
   function panel(title, detail) {
     hideSplash();
     var v = document.getElementById('view'); if (!v) return;

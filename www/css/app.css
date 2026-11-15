@@ -77,3 +77,9 @@ textarea{width:100%;font:inherit;padding:12px 14px;border:1px solid var(--bd);bo
 input[type=tel]{width:100%;font:inherit;padding:12px 14px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx)}
 .danger-zone{border-color:var(--er)}
 .row h1{margin:8px 0}
+
+/* Notifications (étape 2.7) */
+.tabs{display:flex;gap:8px;margin:0 0 12px}.tabs button{flex:1}
+.count{display:inline-block;min-width:20px;margin-left:6px;padding:0 6px;border-radius:99px;background:var(--er);color:#fff;font-size:12px;line-height:20px}
+.nt{display:flex;flex-direction:column;gap:4px;color:inherit;text-decoration:none}
+.nt.new{border-left:4px solid var(--navy);font-weight:600}

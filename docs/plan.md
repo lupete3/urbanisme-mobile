@@ -10,7 +10,7 @@ Cahier des charges complet : `docs/plan-mobile.md` dans le dépôt du site.
 | 2.4 Éditeur | Éditeur du site réutilisé (`www/js/editor.js`, copié par `npm run sync`), branché sur l'API par `www/js/editor-io.js` : appareil photo et galerie natifs (plugin Camera), annotations, émojis, bibliothèque (y compris objets partagés), Annuler / Rétablir, filigrane BROUILLON, enregistrement puis retour à la fiche | ✅ 15/11/2026 |
 | 2.5 Envoi et PDF | Page de garde et notice dessinées sur le téléphone (fonctions partagées de `editor.js`), envoi selon la formule d'accès (finalisé tout de suite si gratuit, sinon en attente de paiement avec le prix), aperçu filigrané, PDF complet enregistré dans le cache puis partagé (plugins Filesystem et Share) | ✅ 15/11/2026 |
 | 2.6 Profil | Bouton « Mon profil » sur l'accueil ; informations (nom, e-mail, téléphone), mot de passe (déconnecte les autres appareils), consentements facultatifs et textes légaux, export des données (JSON partagé), suppression du compte avec mot de passe (exigence Google Play), déconnexion | ✅ 15/11/2026 |
-| 2.7 Finitions | Icône, écran de démarrage, notifications (Firebase), version minimale, tests sur appareil | — |
+| 2.7 Finitions | Écran Notifications (compteur de non lues, ouverture du dossier concerné), actualisation au retour dans l'appli, notifications push prêtes (activées dès que `android/app/google-services.json` est présent, voir `docs/notifications.md` du site), écran de démarrage unique (plugin SplashScreen, masqué dès que l'appli est prête, 4 s au plus) | ✅ 15/11/2026 |
 
 ## Choix techniques
 
@@ -34,6 +34,7 @@ Cahier des charges complet : `docs/plan-mobile.md` dans le dépôt du site.
 | `js/api.js` | Client de l'API (`window.api`) et stockage du jeton (Preferences dans l'appli, localStorage dans un navigateur) |
 | `js/editor-io.js` | Branche l'éditeur sur l'API et l'appareil photo ; boîtes de dialogue |
 | `js/editor.js` | Éditeur de planches du site (copie, ne pas modifier ici : modifier `assets/editor.js` du site puis `npm run sync`) |
+| `js/build.js` | Généré par `npm run sync` : options de compilation (notifications push actives ou non) |
 | `js/app.js` | Navigation (historique et bouton Retour) et écrans |
 
 **Tester dans un navigateur** : servir `www/` à côté d'une copie du site (même origine), puis dans la console : `localStorage.setItem('api','/api.php?r=')`. Sinon, l'appli appelle l'API en ligne.
@@ -55,3 +56,5 @@ Cahier des charges complet : `docs/plan-mobile.md` dans le dépôt du site.
 **Testé le 15/11/2026, étape 2.5** (navigateur, copie locale du site) : notice PD9 cochée dès que le texte est rempli, aperçu PDF filigrané téléchargé, finalisation en mode gratuit (dossier « Débloqué »), PDF complet sans filigrane, page de garde et notice générées correctement. APK 1.0.5 compilé. Partage du PDF : validé sur le téléphone du client.
 
 **Testé le 15/11/2026, étape 2.6** (navigateur, copie locale du site) : infos enregistrées côté serveur, mauvais mot de passe refusé puis changement réussi, choix de consentement enregistrés, export JSON, suppression du compte (retour à la connexion, connexion ensuite refusée). APK 1.0.6 compilé.
+
+**Testé le 15/11/2026, étape 2.7** (navigateur, copie locale du site) : compteur de notifications sur l'accueil, écran Notifications (non lue mise en avant, marquée lue), enregistrement d'un téléphone (`me/device`), chaîne d'envoi Firebase avec une clé factice (jeton signé, refus de Google noté au journal sans bloquer). APK 1.0.7 compilé (notifications push désactivées tant que `google-services.json` est absent).

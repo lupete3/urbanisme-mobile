@@ -1,6 +1,6 @@
 // DOSSIERUrba Mobile : navigation et écrans (compte, consentement, dossiers).
 (() => {
-  const APP_VERSION = '1.0.6';
+  const APP_VERSION = '1.0.7';
   const C = window.Capacitor;
   const App = api.plugin('App');
   const view = document.getElementById('view');
@@ -44,8 +44,8 @@
   }
 
   /* ---------- Après connexion ---------- */
-  async function signedIn(user) { state.user = user; reset(user.consent.required ? consentScreen : homeScreen); }
-  async function logout() { try { await api.post('auth/logout'); } catch (e) {} await api.setToken(null); state.user = null; reset(loginScreen); }
+  async function signedIn(user) { state.user = user; reset(user.consent.required ? consentScreen : homeScreen); if (!user.consent.required) setupPush(); }
+  async function logout() { try { await api.post('auth/logout', { device_token: state.pushToken || '' }); } catch (e) {} await api.setToken(null); state.user = null; reset(loginScreen); }
 
   /* ---------- Écrans ---------- */
   function loginScreen() {
@@ -139,7 +139,9 @@
   function homeScreen() {
     const u = state.user, msg = state.config && state.config.message;
     return el('div', {},
-      el('div', { class: 'row' }, el('h1', {}, 'Bonjour ' + u.name.split(' ')[0]), el('button', { class: 'small ghost', onclick: () => show(profileScreen) }, 'Mon profil')),
+      el('h1', {}, 'Bonjour ' + u.name.split(' ')[0]),
+      el('div', { class: 'tabs' }, (() => { const b = el('button', { class: 'small ghost', onclick: () => show(notifScreen) }, 'Notifications'); api.get('notifications').then((j) => { if (j.unread) b.append(el('span', { class: 'count' }, String(j.unread))); }).catch(() => {}); return b; })(),
+        el('button', { class: 'small ghost', onclick: () => show(profileScreen) }, 'Mon profil')),
       msg ? el('div', { class: 'card note' }, msg) : null,
       zoneLink(),
       el('div', { class: 'row', style: 'margin-top:18px' }, el('h2', { style: 'margin:0' }, 'Mes dossiers'), el('button', { class: 'small', onclick: () => show(newDossierScreen) }, '＋ Nouveau')),
@@ -267,6 +269,39 @@
       pdfBtn];
   }
 
+  /* ---------- Notifications (étape 2.7) ---------- */
+  // Ouvre la cible d'une notification (« a=dossier&id=12 » -> fiche du dossier)
+  function openLink(link) { const m = /a=dossier&id=(\d+)/.exec(link || ''); if (m) show(dossierScreen, +m[1]); else show(notifScreen); }
+  const frDate = (d) => { const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})/.exec(String(d)); return m ? m[3] + '/' + m[2] + '/' + m[1] + ' à ' + m[4] : String(d); };
+  function notifScreen() {
+    return el('div', {}, back$(), el('h1', {}, 'Notifications'), later(async (box) => {
+      const j = await api.get('notifications');
+      fill(box, j.notifications.length ? j.notifications.map((n) => el('a', { class: 'card nt' + (n.read_at ? '' : ' new'), href: '#', onclick: (e) => { e.preventDefault(); openLink(n.link); } },
+        el('span', {}, n.msg), el('small', { class: 'mu' }, frDate(n.created_at)))) : el('div', { class: 'card empty' }, el('p', {}, 'Aucune notification pour le moment.')));
+      if (j.unread) api.post('notifications/read').catch(() => {});
+    }));
+  }
+  // Notifications push : actives seulement si l'appli a été compilée avec Firebase (window.BUILD.push)
+  let pushReady = false;
+  async function setupPush() {
+    const P = (window.BUILD && window.BUILD.push) ? api.plugin('PushNotifications') : null; if (!P) return;
+    try {
+      let perm = await P.checkPermissions();
+      if (perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale') perm = await P.requestPermissions();
+      if (perm.receive !== 'granted') return;
+      if (!pushReady) {
+        pushReady = true;
+        await P.addListener('registration', (t) => { state.pushToken = t.value; api.post('me/device', { token: t.value, platform: 'android' }).catch(() => {}); });
+        await P.addListener('registrationError', (e) => window.bootError && window.bootError('Notifications : ' + JSON.stringify(e)));
+        await P.addListener('pushNotificationReceived', () => refresh());
+        await P.addListener('pushNotificationActionPerformed', (a) => { if (state.user) openLink(((a.notification || {}).data || {}).link); });
+      }
+      await P.register();
+    } catch (e) { window.bootError && window.bootError('Notifications : ' + e.message); }
+  }
+  // Actualise l'écran affiché (accueil, dossier, notifications) ; jamais l'éditeur, pour ne pas perdre un travail en cours
+  function refresh() { const top = stack[stack.length - 1]; if (top && [homeScreen, dossierScreen, notifScreen].includes(top[0]) && !document.querySelector('.sheet')) show(top[0], top[1], false); }
+
   /* ---------- Mon profil (étape 2.6) ---------- */
   // Formulaire du profil : envoi avec bouton occupé, message de réussite ou d'erreur sous le formulaire
   function pform(title, kids, label, fn, cls = '') {
@@ -352,7 +387,13 @@
 
   // Le logo reste au moins 1,2 s, puis disparaît dès que le premier écran est prêt
   const t0 = Date.now();
-  function hideSplash() { const s = document.getElementById('splash'); if (!s || s.classList.contains('out')) return; setTimeout(() => { s.classList.add('out'); setTimeout(() => s.remove(), 400); }, Math.max(0, 1200 - (Date.now() - t0))); }
-  try { if (App) App.addListener('backButton', back); } catch (e) { window.bootError && window.bootError('Bouton Retour : ' + e.message); }
+  const Splash = api.plugin('SplashScreen');
+  if (api.native) { const s = document.getElementById('splash'); if (s) s.remove(); } // l'écran natif est déjà affiché
+  function hideSplash() {
+    if (Splash) { try { Splash.hide(); } catch (e) {} }
+    const s = document.getElementById('splash'); if (!s || s.classList.contains('out')) return;
+    setTimeout(() => { s.classList.add('out'); setTimeout(() => s.remove(), 400); }, Math.max(0, 1200 - (Date.now() - t0)));
+  }
+  try { if (App) { App.addListener('backButton', back); App.addListener('resume', () => { if (state.user) refresh(); }); } } catch (e) { window.bootError && window.bootError('Bouton Retour : ' + e.message); }
   start().catch((e) => reset(offlineScreen, e.message));
 })();
